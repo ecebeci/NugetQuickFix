@@ -1,13 +1,13 @@
 {
   "name": "nuget-quickfix",
-  "displayName": "Nuget-QuickFix",
-  "description": "When a missing namespace error occurs, this extension suggests relevant NuGet packages and installs them with a single click.",
+  "displayName": "NuGet QuickFix",
+  "description": "Finds and installs missing NuGet packages for unresolved C# namespaces with a quick fix.",
   "publisher": "EmreCebeci",
   "repository": {
     "type": "git",
     "url": "https://github.com/ecebeci/NugetQuickFix"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "engines": {
     "vscode": "^1.96.0"
   },

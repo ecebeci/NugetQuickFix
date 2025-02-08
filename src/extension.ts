@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import axios from "axios";
+import * as path from "path";
 
 type Code = {
   value: string;
@@ -40,14 +41,18 @@ export function activate(context: vscode.ExtensionContext)
         if (!packages) {
           return;
         }
-        const selected = await vscode.window.showQuickPick(
+        const selectedPackage = await vscode.window.showQuickPick(
           packages.map((pkg) => pkg.id),
           { placeHolder: "Select a package to install" }
         );
+        if (!selectedPackage) {return;}
 
-        if (selected) {
-          installNugetPackage(selected);
-        }
+        const projects = await findProjectsInWorkspace();
+        const selectedProjectPath = await selectProjectFile(projects);
+        if (!selectedProjectPath) {return;}
+
+        installNugetPackage(selectedPackage, selectedProjectPath);
+        
       }
     )
   );
@@ -74,7 +79,7 @@ export class MissingNamespaceProvider implements vscode.CodeActionProvider
     }
 
     const fixAction = new vscode.CodeAction(
-      `Search for NuGet package to resolve '${packageName}'`,
+      `Search for NuGet package to resolve \`${packageName}\``,
       vscode.CodeActionKind.QuickFix
     );
 
@@ -107,9 +112,9 @@ export async function searchNugetPackages(
   return response?.data.data.slice(0, 5);
 }
 
-export function installNugetPackage(packageName: string)
+export function installNugetPackage(packageName: string, projectPath: string)
 {
-  const command = 'dotnet add package ' + packageName;
+  const command = `dotnet add "${projectPath}" package ${packageName}`;
   const shellExecution = new vscode.ShellExecution(command);
   vscode.window.showInformationMessage(`Installing NuGet package ${packageName}...\nRunning: ${command}`);
   vscode.tasks.executeTask(
@@ -121,4 +126,33 @@ export function installNugetPackage(packageName: string)
       shellExecution
     )
   );
+}
+
+export async function findProjectsInWorkspace(): Promise<string[]>
+{
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+    return Promise.resolve([]);
+  }
+
+  const projectFiles = (await vscode.workspace.findFiles("**/*.csproj")).map((
+    uri
+  ) => uri.fsPath.replace(workspaceFolders[0].uri.fsPath + path.sep, "")
+  );
+  
+  return projectFiles;
+}
+
+export function selectProjectFile(projects: string[]): Thenable<string | undefined> {
+  if (projects.length === 0) {
+    vscode.window.showErrorMessage("No project files found in the workspace.");
+    return Promise.resolve(undefined);
+  }
+  if (projects.length === 1) {
+    return Promise.resolve(projects[0]);
+  }
+  
+  return vscode.window.showQuickPick(projects, {
+    placeHolder: "Select a project file",
+  });
 }
